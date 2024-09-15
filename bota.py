@@ -164,8 +164,11 @@ def durasi_handler(update: Update, context: CallbackContext) -> None:
     durasi_terpilih = data[3]
     harga_terpilih = data[4]
     
-    context.user_data['durasi'] = durasi_terpilih  # Simpan durasi terpilih
-    context.user_data['harga'] = harga_terpilih  # Simpan harga terpilih
+    # Simpan data ke context.user_data
+    context.user_data['layanan'] = layanan_terpilih
+    context.user_data['paket'] = paket_terpilih
+    context.user_data['durasi'] = durasi_terpilih
+    context.user_data['harga'] = harga_terpilih
 
     # Pesan konfirmasi
     message = f"Kamu memilih paket <b>{paket_terpilih}</b> dalam layanan <b>{layanan_terpilih.upper()}</b> untuk durasi <b>{durasi_terpilih}</b> dengan harga <b>Rp {harga_terpilih}</b>.\n\n<b>Silakan pilih metode pembayaran.</b>"
@@ -406,25 +409,31 @@ def back_to_payment_handler(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     query.answer()
 
-    data = query.data.split(":")
-    layanan_terpilih = data[1]
-    paket_terpilih = data[2]
-    durasi_terpilih = data[3]
-    harga_terpilih = data[4]
+    # Cek apakah context.user_data memiliki layanan dan paket
+    layanan_terpilih = context.user_data.get('layanan', None)
+    paket_terpilih = context.user_data.get('paket', None)
+    durasi_terpilih = context.user_data.get('durasi', None)
+    harga_terpilih = context.user_data.get('harga', None)
+
+    # Jika salah satu data tidak ada, kirim pesan error
+    if not layanan_terpilih or not paket_terpilih or not durasi_terpilih or not harga_terpilih:
+        query.edit_message_text("Data tidak lengkap, silakan ulangi dari awal.")
+        return
 
     # Kembali ke pemilihan metode pembayaran
     keyboard = [
         [InlineKeyboardButton("Dana", callback_data=f"payment:dana:{harga_terpilih}"),
          InlineKeyboardButton("GoPay", callback_data=f"payment:gopay:{harga_terpilih}")],
         [InlineKeyboardButton("QRIS", callback_data=f"payment:qris:{harga_terpilih}")],
-        [InlineKeyboardButton("Kembali", callback_data=f"back:durasi:{context.user_data['layanan']}:{context.user_data['paket']}")]
+        [InlineKeyboardButton("Kembali", callback_data=f"back:durasi:{layanan_terpilih}:{paket_terpilih}")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    query.edit_message_text(f"Kamu memilih paket <b>{paket_terpilih}</b> dalam layanan <b>{layanan_terpilih.upper()}</b> untuk durasi <b>{durasi_terpilih}</b> dengan harga <b>Rp {harga_terpilih}</b>.\n\n<b>Silakan pilih metode pembayaran.</b>",
-    reply_markup=reply_markup,
-    parse_mode=ParseMode.HTML
-    )    
+    query.edit_message_text(
+        f"Kamu memilih paket <b>{paket_terpilih}</b> dalam layanan <b>{layanan_terpilih.upper()}</b> untuk durasi <b>{durasi_terpilih}</b> dengan harga <b>Rp {harga_terpilih}</b>.\n\n<b>Silakan pilih metode pembayaran.</b>",
+        reply_markup=reply_markup,
+        parse_mode=ParseMode.HTML
+    )
     
 # Fungsi untuk membagi pesan panjang
 def split_message(message, max_length=4096):
